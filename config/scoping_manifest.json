@@ -1,0 +1,11 @@
+{
+  "project_title": "HCAI Public Health Data Warehouse (NHANES)",
+  "academic_supervisor": "Professor Solomon Sunday Oyelere",
+  "cloud_platform": "Snowflake Computing Engine",
+  "transformation_framework": "dbt (data build tool)",
+  "governance_pillars": {
+    "privacy": "Column-Level Masking over clinical survey sequences (SEQN)",
+    "equity": "dbt representative population weighting validation tests",
+    "provenance": "dbt automated documentation DAG lineage compilation"
+  }
+}
