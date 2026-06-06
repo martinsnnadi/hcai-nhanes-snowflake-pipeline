@@ -1,4 +1,4 @@
--->
+<!--
 -- ========================================================
 -- WEEK 5-6: NHANES DEMOGRAPHIC & HEALTH MODULE INGESTION
 -- Enforcing strict relational data types inside Snowflake
@@ -25,4 +25,4 @@ CREATE OR REPLACE TRANSIENT TABLE NHANES_BRONZE_LABORATORY (
 
 -- HCAI Provenance Check: Validate database relational tracking schemas
 SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'NHANES_BRONZE_%';
-__
+-->
