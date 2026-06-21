@@ -1,30 +1,74 @@
-<!--
+-- ========================================================================
+-- WEEK 5-6 / REF-WEEK 8: NHANES III SCHEMA HUMANIZATION LOCKDOWN
+-- Mapping raw CDC byte offsets directly to human-understandable English columns
+-- Repository Location: models/nhanes_bronze_schema.sql
+-- ========================================================================
 
--- ========================================================
--- WEEK 5-6: NHANES DEMOGRAPHIC & HEALTH MODULE INGESTION
--- Enforcing strict relational data types inside Snowflake
--- ========================================================
+USE DATABASE NHANES_DB;
+USE SCHEMA BRONZE;
 
-CREATE OR REPLACE TRANSIENT TABLE NHANES_BRONZE_DEMOGRAPHICS (
-    SEQN INT NOT NULL,                  -- Unique Sequence ID (Primary Key)
-    RIAGENDR INT,                       -- Gender category code
-    RIDAGEYR INT,                       -- Age at time of screening (Years)
-    RIDRETH1 INT,                       -- Race/Hispanic origin category code
-    DMDEDUC2 INT,                       -- Education Level (Adults 20+)
-    DMDMARTL INT,                       -- Marital Status code
-    INDFMPIR FLOAT,                     -- Family income-to-poverty ratio
-    INGESTION_TIMESTAMP TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+-- 1. TEAR DOWN OLD MISALIGNED OR CRYPTIC CODEBOOK TABLES
+DROP TABLE IF EXISTS DEMOGRAPHICS_BRONZE;
+DROP TABLE IF EXISTS LABORATORY_BRONZE;
+
+-- 2. CREATE PRODUCTION SCHEMAS WITH EXPLICIT, READABLE FIELD NAMES
+CREATE TABLE DEMOGRAPHICS_BRONZE (
+    PARTICIPANT_SEQN NUMBER(10, 0) NOT NULL, -- Core ID anchor (Positions 1-5)
+    BIOLOGICAL_SEX NUMBER(2, 0),             -- 1=Male, 2=Female (Position 15)
+    INTERVIEW_AGE NUMBER(3, 0),              -- Continuous Age value (Positions 18-19)
+    RACE_ETHNICITY_CODE NUMBER(2, 0),        -- Ethno-demographic group (Position 12)
+    POVERTY_INCOME_RATIO FLOAT,              -- Continuous financial index (Positions 36-41)
+    PIPELINE_INGEST_TS TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() -- Ingestion lineage tracker
 );
 
-CREATE OR REPLACE TRANSIENT TABLE NHANES_BRONZE_LABORATORY (
-    SEQN INT NOT NULL,                  -- Unique Sequence ID (Foreign Key Link)
-    LBXGH FLOAT,                        -- Glycohemoglobin (%) - Diabetes proxy
-    LBDGLVSI FLOAT,                     -- Fasting Glucose (mmol/L)
-    LBXTC FLOAT,                        -- Total Cholesterol (mg/dL)
-    INGESTION_TIMESTAMP TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+CREATE TABLE LABORATORY_BRONZE (
+    PARTICIPANT_SEQN NUMBER(10, 0) NOT NULL, -- Foreign Key Link (Positions 1-5)
+    COTININE_LEVEL FLOAT,                    -- Tobacco exposure marker (Positions 1246-1249)
+    VITAMIN_D_LEVEL FLOAT,                   -- 25-hydroxyvitamin D status (Positions 1255-1259)
+    THYROID_STIMULATING_HORMONE FLOAT,       -- Metabolic regulator (Positions 1274-1278)
+    PIPELINE_INGEST_TS TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() -- Ingestion lineage tracker
 );
 
--- HCAI Provenance Check: Validate database relational tracking schemas
-SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'NHANES_BRONZE_%';
+-- 3. EXECUTE DEFENSIVE ELT SLICING VIA TRY_CAST FROM STAGED TEXT RECORD TABLES
+-- Slicing Demographics with corrected byte mapping offsets
+INSERT INTO DEMOGRAPHICS_BRONZE (
+    PARTICIPANT_SEQN, 
+    BIOLOGICAL_SEX, 
+    INTERVIEW_AGE, 
+    RACE_ETHNICITY_CODE, 
+    POVERTY_INCOME_RATIO
+)
+SELECT 
+    TRY_CAST(SUBSTR(RAW_RECORD, 1, 5) AS INT) AS PARTICIPANT_SEQN,
+    TRY_CAST(SUBSTR(RAW_RECORD, 15, 1) AS INT) AS BIOLOGICAL_SEX,
+    TRY_CAST(SUBSTR(RAW_RECORD, 18, 2) AS INT) AS INTERVIEW_AGE,   
+    TRY_CAST(SUBSTR(RAW_RECORD, 12, 1) AS INT) AS RACE_ETHNICITY_CODE, 
+    TRY_CAST(SUBSTR(RAW_RECORD, 36, 6) AS FLOAT) AS POVERTY_INCOME_RATIO 
+FROM RAW_DEMO_STAGE;
 
--->
+-- Slicing Laboratory using true LAB2.DAT biological parameter layouts
+INSERT INTO LABORATORY_BRONZE (
+    PARTICIPANT_SEQN, 
+    COTININE_LEVEL, 
+    VITAMIN_D_LEVEL, 
+    THYROID_STIMULATING_HORMONE
+)
+SELECT 
+    TRY_CAST(SUBSTR(RAW_RECORD, 1, 5) AS INT) AS PARTICIPANT_SEQN,
+    TRY_CAST(SUBSTR(RAW_RECORD, 1246, 4) AS FLOAT) AS COTININE_LEVEL, 
+    TRY_CAST(SUBSTR(RAW_RECORD, 1255, 5) AS FLOAT) AS VITAMIN_D_LEVEL, 
+    TRY_CAST(SUBSTR(RAW_RECORD, 1274, 5) AS FLOAT) AS THYROID_STIMULATING_HORMONE 
+FROM RAW_LAB_STAGE;
+
+-- 4. RUN SYSTEM INVENTORY QUALITY ASSURANCE AUDIT (HCAI PROVENANCE CHECK)
+SELECT 
+    'DEMOGRAPHICS_BRONZE' AS TABLE_NAME, 
+    COUNT(*) AS ROW_COUNT, 
+    COUNT(POVERTY_INCOME_RATIO) AS POPULATED_TRAIT_COUNT 
+FROM DEMOGRAPHICS_BRONZE
+UNION ALL
+SELECT 
+    'LABORATORY_BRONZE' AS TABLE_NAME, 
+    COUNT(*) AS ROW_COUNT, 
+    COUNT(COTININE_LEVEL) AS POPULATED_TRAIT_COUNT 
+FROM LABORATORY_BRONZE;
