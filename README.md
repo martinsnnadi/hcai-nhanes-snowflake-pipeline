@@ -75,5 +75,5 @@ Deployed automated data quality scripts to enforce constraints before rows advan
 
 1. Log into **Snowflake (Snowsight)** and open a fresh SQL Worksheet.
 2. Execute the DDL statements in **`models/nhanes_bronze_schema.sql`** to initialize target storage tables.
-3. Upload local `adult.dat` and `lab.dat` files into your database staging structures via the Data UI, ensuring column splitters are disabled (`FIELD_DELIMITER = NONE`).
+3. Upload local `adult.dat` and `lab2.dat` files into your database staging structures via the Data UI, ensuring column splitters are disabled (`FIELD_DELIMITER = NONE`).
 4. Run the native transformation queries to slice the raw text blocks and populate your conformed data tables.
