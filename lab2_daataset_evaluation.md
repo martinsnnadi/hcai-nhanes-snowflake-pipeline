@@ -1,4 +1,4 @@
-# NHANES III Laboratory 2 (LAB2) Column Evaluation
+# NHANES III Laboratory 2 (LAB2) Dataset Evaluation
 
 **Project**: Data Engineering for Human-Centred AI Research  
 **Supervisor**: Prof. Solomon Sunday Oyelere  
