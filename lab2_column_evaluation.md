@@ -46,8 +46,6 @@ The final selection of **Cotinine**, **Vitamin D**, and **Thyroid Hormone** fiel
 
 ## 4. Supervision Review Talking Points (For Prof. Oyelere)
 
-This analysis provides your exact, data-backed defense for your presentation:
-
 > *"Professor Oyelere, I conducted a thorough column evaluation of the LAB2 dataset to justify our ingestion choices. Rather than dumping every variable into a data swamp, my audit revealed that columns like Lead and Mercury suffer from extreme null rates between 79% and 91% because they were only tested on small sub-cohorts.*
 > 
 > *To enforce strict data minimization and protect downstream model accuracy, I dropped these sparse fields. Instead, I selected Cotinine, Vitamin D, and Thyroid Hormone because they maintain dense, reliable coverage with null rates under 10.5%. This concise feature matrix optimizes our Snowflake compute costs and provides a clean biological baseline to run our upcoming Fairlearn algorithmic equity checks."*
